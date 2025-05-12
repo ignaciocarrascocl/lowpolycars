@@ -6,7 +6,7 @@ export default class RoadManager {
     this.scene = scene;
     this.roadSegments = [];
     this.roadModel = null;
-    this.visibleSegments = 20; // Número de segmentos visibles a la vez
+    this.visibleSegments = 30; // Número de segmentos visibles a la vez
     this.roadWidth = 1; // Ancho base total de la carretera (4 carriles)
     this.laneWidth = this.roadWidth / 4; // Ancho base de cada carril
     this.playerZPosition = 0; // La posición Z actual del jugador (reemplaza roadPosition)

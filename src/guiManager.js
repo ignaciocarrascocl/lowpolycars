@@ -352,63 +352,8 @@ export default class GuiManager {
     
     const playerFolder = this.gui.addFolder('Jugador');
     
-    // Sección para las marcas de neumáticos
-    const trailFolder = playerFolder.addFolder('Marcas de neumáticos');
-    
-    // Activar/desactivar marcas
-    trailFolder.add(this.playerController.tireTrail, 'enabled')
-      .name('Mostrar marcas')
-      .onChange(value => {
-        if (value !== this.playerController.tireTrail.enabled) {
-          this.playerController.toggleTrail();
-        }
-      });
-    
-    // Opacidad de las marcas
-    trailFolder.add(this.playerController.tireTrail.trailMaterial, 'opacity', 0.1, 1)
-      .name('Intensidad de las marcas')
-      .onChange(value => {
-        this.playerController.tireTrail.trailMaterial.opacity = value;
-      });
-    
-    // Ancho de los neumáticos (distancia entre marcas)
-    trailFolder.add(this.playerController.tireTrail, 'wheelDistance', 0.6, 1.5, 0.05)
-      .name('Distancia entre ruedas')
-      .onChange(value => {
-        this.playerController.tireTrail.wheelDistance = value;
-      });
-    
-    // Control para la distancia entre ejes
-    trailFolder.add(this.playerController.tireTrail, 'wheelBase', 0.8, 2, 0.1)
-      .name('Distancia entre ejes')
-      .onChange(value => {
-        this.playerController.tireTrail.wheelBase = value;
-      });
-    
-    // Longitud de las marcas (número de puntos)
-    trailFolder.add(this.playerController.tireTrail, 'trailLength', 20, 300, 10)
-      .name('Longitud de las marcas')
-      .onChange(value => {
-        this.playerController.tireTrail.trailLength = value;
-      });
-    
-    // Intervalo de puntos (menor = más denso)
-    trailFolder.add(this.playerController.tireTrail, 'trailInterval', 1, 10, 1)
-      .name('Densidad (menor = más denso)')
-      .onChange(value => {
-        this.playerController.tireTrail.trailInterval = value;
-      });
-    
-    // Botón para limpiar las marcas actuales
-    trailFolder.add({
-      clearTrail: () => {
-        this.playerController.tireTrail.clear();
-      }
-    }, 'clearTrail').name('Limpiar marcas');
-    
-    // Carpeta abierta por defecto
+    // Solo dejamos abierta la carpeta del jugador, sin añadir controles para el trail
     playerFolder.open();
-    trailFolder.open();
   }
 
   destroy() {

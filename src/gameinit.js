@@ -16,6 +16,8 @@ export default class GameInit {
     this.guiManager = null;
     this.directionalLight = null;
     this.ambientLight = null;
+    this.playerLightLeft = null; // Luz para el faro izquierdo del coche del jugador
+    this.playerLightRight = null; // Luz para el faro derecho del coche del jugador
     this.roadManager = null;
     this.playerController = null;
     this.trafficManager = null;
@@ -49,13 +51,13 @@ export default class GameInit {
   }
 
   setupLights() {
-    // Luz ambiental
-    this.ambientLight = new THREE.AmbientLight(0x404040, 1);
+    // Luz ambiental muy tenue para ambiente nocturno
+    this.ambientLight = new THREE.AmbientLight(0x101820, 0.2);
     this.scene.add(this.ambientLight);
 
-    // Luz direccional principal (simula el sol)
-    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    this.directionalLight.position.set(50, 100, 50);
+    // Luz direccional principal (simula la luna) - tono azulado tenue
+    this.directionalLight = new THREE.DirectionalLight(0x8ebbff, 0.3);
+    this.directionalLight.position.set(-50, 80, 100);
     this.directionalLight.castShadow = true;
     this.directionalLight.shadow.mapSize.width = 2048;
     this.directionalLight.shadow.mapSize.height = 2048;
@@ -66,18 +68,38 @@ export default class GameInit {
     this.directionalLight.shadow.camera.bottom = -100;
     this.scene.add(this.directionalLight);
     
-    // Añadir una luz puntual para el coche del jugador
-    const playerLight = new THREE.PointLight(0xffffff, 0.5, 20);
-    playerLight.position.set(0, 5, 10);
-    this.scene.add(playerLight);
+    // Luces focales para los faros del coche (dos luces separadas)
+    // Faro izquierdo
+    this.playerLightLeft = new THREE.SpotLight(0xfff2d9, 4, 50, Math.PI/8, 0.7, 1);
+    this.playerLightLeft.position.set(0, 0.7, 0);
+    this.playerLightLeft.target.position.set(0, 0, -10);
+    this.playerLightLeft.castShadow = true;
+    this.playerLightLeft.shadow.mapSize.width = 512;
+    this.playerLightLeft.shadow.mapSize.height = 512;
+    this.scene.add(this.playerLightLeft);
+    this.scene.add(this.playerLightLeft.target);
+    
+    // Faro derecho
+    this.playerLightRight = new THREE.SpotLight(0xfff2d9, 4, 50, Math.PI/8, 0.7, 1);
+    this.playerLightRight.position.set(0, 0.7, 0);
+    this.playerLightRight.target.position.set(0, 0, -10);
+    this.playerLightRight.castShadow = true;
+    this.playerLightRight.shadow.mapSize.width = 512;
+    this.playerLightRight.shadow.mapSize.height = 512;
+    this.scene.add(this.playerLightRight);
+    this.scene.add(this.playerLightRight.target);
+    
+    // Luz ambiental de suelo (bounce light) muy sutil para noche
+    const groundLight = new THREE.HemisphereLight(0x303050, 0x101010, 0.15);
+    this.scene.add(groundLight);
   }
 
   setupGameSystems() {
-    // Configurar cielo
-    this.scene.background = new THREE.Color(0x87ceeb); // Azul claro para el cielo
+    // Configurar cielo nocturno
+    this.scene.background = new THREE.Color(0x05101a); // Azul muy oscuro, casi negro
     
-    // Configurar niebla para dar sensación de profundidad
-    this.scene.fog = new THREE.Fog(0x87ceeb, 100, 500);
+    // Configurar niebla para dar sensación de profundidad en ambiente nocturno
+    this.scene.fog = new THREE.Fog(0x05101a, 50, 250);
     
     // Inicializar el sistema de carreteras
     this.roadManager = new RoadManager(this.scene);
@@ -94,23 +116,7 @@ export default class GameInit {
     // Configurar GUI para desarrollo (opcional)
     this.setupGui();
     
-    // Añadir un plano que simule el terreno
-    this.setupTerrain();
-  }
-  
-  setupTerrain() {
-    // Crear un plano grande para simular terreno base
-    const terrainGeometry = new THREE.PlaneGeometry(2000, 2000);
-    const terrainMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x3a7e4f,  // Verde para simular hierba/terreno
-      roughness: 0.8,
-      metalness: 0.2
-    });
-    const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
-    terrain.rotation.x = -Math.PI / 2; // Rotar para que esté horizontal
-    terrain.position.y = -0.1; // Ligeramente por debajo de la carretera
-    terrain.receiveShadow = true;
-    this.scene.add(terrain);
+    // El plano de terreno ha sido eliminado
   }
   
   setupPostProcessing() {
@@ -184,6 +190,49 @@ export default class GameInit {
     if (this.trafficManager && this.playerController && this.playerController.carModel) {
       const playerZPosition = this.playerController.carModel.position.z;
       this.trafficManager.update(delta, playerZPosition);
+    }
+    
+    // Actualizar la posición de las luces del jugador (faros)
+    if (this.playerLightLeft && this.playerLightRight && this.playerController && this.playerController.carModel) {
+      const playerPos = this.playerController.carModel.position.clone();
+      const playerRot = this.playerController.carModel.rotation.y;
+      
+      // Vector hacia adelante del coche (Z negativo porque el modelo está rotado 180 grados)
+      // Ya que el coche se mueve en dirección Z negativa
+      const forwardVector = new THREE.Vector3(0, 0, -1);
+      forwardVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRot);
+      
+      // Vector lateral (perpendicular al forward)
+      const rightVector = new THREE.Vector3(1, 0, 0);
+      rightVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRot);
+      
+      // Desplazamiento del frontal - el coche mira hacia Z negativo, así que este es el frente real
+      const frontOffset = 1.5; // Ajustado para colocar las luces más adelante
+      const frontPos = playerPos.clone().add(forwardVector.clone().multiplyScalar(-frontOffset));
+      
+      // Separación horizontal de los faros
+      const headlightSpread = 0.6;
+      
+      // Posicionar los faros a la altura y separación correcta
+      const leftHeadlightPos = frontPos.clone().add(rightVector.clone().multiplyScalar(-headlightSpread));
+      leftHeadlightPos.y = playerPos.y + 0.6; // Altura ajustada
+      
+      const rightHeadlightPos = frontPos.clone().add(rightVector.clone().multiplyScalar(headlightSpread));
+      rightHeadlightPos.y = playerPos.y + 0.6; // Altura ajustada
+      
+      // Asignar posiciones a las luces
+      this.playerLightLeft.position.copy(leftHeadlightPos);
+      this.playerLightRight.position.copy(rightHeadlightPos);
+      
+      // Calcular una posición objetivo común para ambos faros (20 unidades adelante)
+      // Como el coche mira hacia Z negativo, necesitamos usar la dirección correcta
+      const targetDistance = 30;
+      const targetPos = frontPos.clone().add(forwardVector.clone().multiplyScalar(-targetDistance));
+      targetPos.y = playerPos.y - 0.5; // Apuntar ligeramente hacia abajo
+      
+      // Asignar posición objetivo a los faros
+      this.playerLightLeft.target.position.copy(targetPos);
+      this.playerLightRight.target.position.copy(targetPos);
     }
     
     // Actualizar la cámara para seguir al jugador usando el controlador de cámara
